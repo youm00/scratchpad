@@ -203,17 +203,32 @@ function setStatus(msg, type = '') {
   $status.classList.remove('hidden');
 }
 
+// ── PKCE helpers ─────────────────────────────────────────────
+function base64url(buf) {
+  return btoa(String.fromCharCode(...buf))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function sha256str(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return base64url(new Uint8Array(buf));
+}
+  
 // ── OAuth2 ログイン（stateのみ、PKCEなし）────────────────────
-function signIn() {
-  const state = Math.random().toString(36).slice(2);
-  sessionStorage.setItem('sp_oauth_state', state);
+async function signIn() {
+  const verifier  = base64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = await sha256str(verifier);
+  const state     = Math.random().toString(36).slice(2);
+  sessionStorage.setItem('sp_oauth_state',    state);
+  sessionStorage.setItem('sp_code_verifier',  verifier);
 
   const params = new URLSearchParams({
-    client_id:         APP_KEY,
-    response_type:     'code',
-    redirect_uri:      REDIRECT_URI,
-    token_access_type: 'offline',
+    client_id:             APP_KEY,
+    response_type:         'code',
+    redirect_uri:          REDIRECT_URI,
+    token_access_type:     'offline',
     state,
+    code_challenge:        challenge,
+    code_challenge_method: 'S256',
   });
 
   location.href = 'https://www.dropbox.com/oauth2/authorize?' + params;
@@ -247,10 +262,13 @@ async function refreshAccessToken() {
 }
 
 async function exchangeCode(code) {
+  const verifier = sessionStorage.getItem('sp_code_verifier') || '';
+  sessionStorage.removeItem('sp_code_verifier');
+
   const resp = await fetch(WORKER_BASE + '/token/exchange', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI }),
+    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI, code_verifier: verifier }),
   });
   const data = await resp.json();
   if (!resp.ok || !data.access_token) {
