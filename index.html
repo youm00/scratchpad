@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scratchpad</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500&display=swap');
+
+  :root {
+    --bg:        #1a1a1a;
+    --surface:   #222222;
+    --border:    #333333;
+    --text:      #e8e8e8;
+    --muted:     #666666;
+    --accent:    #7eb8f7;
+    --danger:    #f07070;
+    --success:   #7ecf8e;
+    --warning:   #f0c070;
+    --radius:    6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+  }
+
+  /* ── レイアウト ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* ── ヘッダー ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+
+  .spacer { flex: 1; }
+
+  #status {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+  #status.saving  { color: var(--warning); }
+  #status.saved   { color: var(--success); }
+  #status.dirty   { color: var(--muted); }
+  #status.error   { color: var(--danger); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--border); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #111;
+    font-weight: 500;
+  }
+  .btn-primary:hover { background: #a0ccff; border-color: #a0ccff; }
+  .btn-icon {
+    padding: 5px 8px;
+    font-size: 16px;
+  }
+
+  /* ── エディタ ── */
+  #editor-wrap {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  #editor {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 20px 24px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    line-height: 1.75;
+    caret-color: var(--accent);
+  }
+
+  #editor::placeholder { color: var(--muted); }
+
+  /* ── ログイン画面 ── */
+  #login-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px;
+  }
+
+  .login-icon {
+    font-size: 56px;
+    opacity: 0.3;
+  }
+
+  .login-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+
+  .login-sub {
+    color: var(--muted);
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  #login-error {
+    color: var(--danger);
+    font-size: 13px;
+    text-align: center;
+    display: none;
+  }
+
+  /* ── ローディング ── */
+  #loading-screen {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ユーティリティ ── */
+  .hidden { display: none !important; }
+
+  /* ── モバイル ── */
+  @media (max-width: 480px) {
+    header { padding: 8px 12px; }
+    #editor { padding: 14px 16px; font-size: 14px; }
+    .logo { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ヘッダー -->
+  <header>
+    <span class="logo">// scratchpad</span>
+    <div class="spacer"></div>
+    <span id="status" class="hidden"></span>
+    <button class="btn btn-icon hidden" id="btn-reload" title="再読み込み">↺</button>
+    <button class="btn btn-icon hidden" id="btn-save"   title="保存">⬆</button>
+    <button class="btn hidden"          id="btn-logout">ログアウト</button>
+    <button class="btn btn-primary hidden" id="btn-login">Dropboxでログイン</button>
+  </header>
+
+  <!-- ローディング -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <span>読み込み中...</span>
+  </div>
+
+  <!-- ログイン画面 -->
+  <div id="login-screen" class="hidden">
+    <div class="login-icon">📝</div>
+    <div class="login-title">Scratchpad</div>
+    <div class="login-sub">Dropboxにログインして<br>どこからでもメモにアクセス</div>
+    <button class="btn btn-primary" id="btn-login-center">Dropboxでログイン</button>
+    <div id="login-error"></div>
+  </div>
+
+  <!-- エディタ -->
+  <div id="editor-wrap" class="hidden">
+    <textarea id="editor" placeholder="ここに自由に書いてください..."></textarea>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+//  設定（自分の値に書き換えてください）
+// ============================================================
+const APP_KEY     = 'YOUR_DROPBOX_APP_KEY';
+const WORKER_BASE = 'https://scratchpad-oauth.youm00.workers.dev';
+const REDIRECT_URI = location.origin + '/scratchpad/callback';
+const FILE_PATH   = '/scratchpad.txt';
+// ============================================================
+
+const AUTO_SAVE_DELAY = 2000; // ms
+
+// ── ストレージ ────────────────────────────────────────────────
+const store = {
+  get: (k)    => localStorage.getItem(k),
+  set: (k, v) => localStorage.setItem(k, v),
+  del: (k)    => localStorage.removeItem(k),
+};
+
+// ── 状態 ─────────────────────────────────────────────────────
+let accessToken  = store.get('sp_access');
+let refreshToken = store.get('sp_refresh');
+let isDirty      = false;
+let isSaving     = false;
+let autoSaveTimer = null;
+
+// ── DOM ───────────────────────────────────────────────────────
+const $loading      = document.getElementById('loading-screen');
+const $loginScreen  = document.getElementById('login-screen');
+const $editorWrap   = document.getElementById('editor-wrap');
+const $editor       = document.getElementById('editor');
+const $status       = document.getElementById('status');
+const $btnLogin     = document.getElementById('btn-login');
+const $btnLoginC    = document.getElementById('btn-login-center');
+const $btnLogout    = document.getElementById('btn-logout');
+const $btnSave      = document.getElementById('btn-save');
+const $btnReload    = document.getElementById('btn-reload');
+const $loginError   = document.getElementById('login-error');
+
+// ── 画面切り替え ─────────────────────────────────────────────
+function showLoading() {
+  $loading.classList.remove('hidden');
+  $loginScreen.classList.add('hidden');
+  $editorWrap.classList.add('hidden');
+  [$btnLogin, $btnLogout, $btnSave, $btnReload, $status].forEach(el => el.classList.add('hidden'));
+}
+
+function showLogin(errMsg = '') {
+  $loading.classList.add('hidden');
+  $loginScreen.classList.remove('hidden');
+  $editorWrap.classList.add('hidden');
+  $btnLogin.classList.remove('hidden');
+  [$btnLogout, $btnSave, $btnReload, $status].forEach(el => el.classList.add('hidden'));
+  if (errMsg) {
+    $loginError.textContent = errMsg;
+    $loginError.style.display = 'block';
+  }
+}
+
+function showEditor() {
+  $loading.classList.add('hidden');
+  $loginScreen.classList.add('hidden');
+  $editorWrap.classList.remove('hidden');
+  [$btnLogout, $btnSave, $btnReload, $status].forEach(el => el.classList.remove('hidden'));
+  $btnLogin.classList.add('hidden');
+}
+
+// ── ステータス表示 ───────────────────────────────────────────
+function setStatus(msg, type = '') {
+  $status.textContent = msg;
+  $status.className   = type;
+  $status.classList.remove('hidden');
+}
+
+// ── PKCE ─────────────────────────────────────────────────────
+function randomBytes(len) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return arr;
+}
+
+function base64url(buf) {
+  return btoa(String.fromCharCode(...buf))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return base64url(new Uint8Array(buf));
+}
+
+// ── OAuth2 ログイン ──────────────────────────────────────────
+async function signIn() {
+  const verifier  = base64url(randomBytes(32));
+  const challenge = await sha256(verifier);
+  store.set('sp_verifier', verifier);
+
+  const params = new URLSearchParams({
+    client_id:             APP_KEY,
+    response_type:         'code',
+    redirect_uri:          REDIRECT_URI,
+    token_access_type:     'offline',
+    code_challenge:        challenge,
+    code_challenge_method: 'S256',
+  });
+
+  location.href = 'https://www.dropbox.com/oauth2/authorize?' + params;
+}
+
+// ── コールバック処理 ─────────────────────────────────────────
+async function handleCallback() {
+  const params   = new URLSearchParams(location.search);
+  const code     = params.get('code');
+  const verifier = store.get('sp_verifier');
+
+  if (!code || !verifier) {
+    showLogin('認証コードが取得できませんでした');
+    return;
+  }
+
+  showLoading();
+
+  try {
+    const resp = await fetch(WORKER_BASE + '/token/exchange', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: REDIRECT_URI, code_verifier: verifier }),
+    });
+    const data = await resp.json();
+
+    if (!data.access_token) throw new Error(data.error_description || JSON.stringify(data));
+
+    accessToken  = data.access_token;
+    refreshToken = data.refresh_token;
+    store.set('sp_access',  accessToken);
+    store.set('sp_refresh', refreshToken);
+    store.del('sp_verifier');
+
+    // URLをクリーンに
+    history.replaceState({}, '', location.pathname.replace('/callback', ''));
+    await loadText();
+  } catch (e) {
+    showLogin('ログインエラー: ' + e.message);
+  }
+}
+
+// ── トークンリフレッシュ ─────────────────────────────────────
+async function refreshAccessToken() {
+  if (!refreshToken) throw new Error('ログインが必要です');
+
+  const resp = await fetch(WORKER_BASE + '/token/refresh', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  const data = await resp.json();
+  if (!data.access_token) throw new Error('トークンリフレッシュ失敗');
+
+  accessToken = data.access_token;
+  store.set('sp_access', accessToken);
+  return accessToken;
+}
+
+// ── 有効なトークン取得 ───────────────────────────────────────
+async function getToken() {
+  if (!accessToken) return await refreshAccessToken();
+
+  const check = await fetch('https://api.dropboxapi.com/2/check/user', {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: 'check' }),
+  });
+  if (check.ok) return accessToken;
+  return await refreshAccessToken();
+}
+
+// ── ファイル読み込み ─────────────────────────────────────────
+async function loadText() {
+  showLoading();
+  try {
+    const token = await getToken();
+    const resp  = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method:  'POST',
+      headers: {
+        'Authorization':   'Bearer ' + token,
+        'Dropbox-API-Arg': JSON.stringify({ path: FILE_PATH }),
+      },
+    });
+
+    if (resp.ok) {
+      $editor.value = await resp.text();
+    } else if (resp.status === 409) {
+      $editor.value = ''; // ファイル未存在は空
+    } else {
+      throw new Error('読み込みエラー ' + resp.status);
+    }
+
+    isDirty = false;
+    setStatus('読み込み完了', 'saved');
+    showEditor();
+    setTimeout(() => setStatus('', ''), 2000);
+  } catch (e) {
+    if (e.message.includes('ログイン')) { showLogin(); return; }
+    showEditor();
+    setStatus('読み込みエラー: ' + e.message, 'error');
+  }
+}
+
+// ── ファイル保存 ─────────────────────────────────────────────
+async function saveText() {
+  if (isSaving) return;
+  isSaving = true;
+  setStatus('保存中...', 'saving');
+  $btnSave.disabled = true;
+
+  try {
+    const token = await getToken();
+    const resp  = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method:  'POST',
+      headers: {
+        'Authorization':   'Bearer ' + token,
+        'Content-Type':    'application/octet-stream',
+        'Dropbox-API-Arg': JSON.stringify({
+          path: FILE_PATH, mode: 'overwrite', autorename: false, mute: true,
+        }),
+      },
+      body: new TextEncoder().encode($editor.value),
+    });
+
+    if (!resp.ok) throw new Error('保存エラー ' + resp.status);
+
+    isDirty = false;
+    const now = new Date();
+    const hms = [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map(n => String(n).padStart(2, '0')).join(':');
+    setStatus('✓ 保存済み ' + hms, 'saved');
+  } catch (e) {
+    setStatus('保存エラー: ' + e.message, 'error');
+  } finally {
+    isSaving = false;
+    $btnSave.disabled = false;
+  }
+}
+
+// ── 自動保存 ─────────────────────────────────────────────────
+function onEditorInput() {
+  if (!isDirty) {
+    isDirty = true;
+    setStatus('未保存の変更あり', 'dirty');
+  }
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(saveText, AUTO_SAVE_DELAY);
+}
+
+// ── ログアウト ───────────────────────────────────────────────
+function signOut() {
+  if (!confirm('ログアウトしますか？')) return;
+  accessToken = refreshToken = null;
+  store.del('sp_access');
+  store.del('sp_refresh');
+  $editor.value = '';
+  isDirty = false;
+  showLogin();
+}
+
+// ── イベント ─────────────────────────────────────────────────
+$btnLogin.addEventListener('click',    signIn);
+$btnLoginC.addEventListener('click',   signIn);
+$btnLogout.addEventListener('click',   signOut);
+$btnSave.addEventListener('click',     saveText);
+$btnReload.addEventListener('click',   loadText);
+$editor.addEventListener('input',      onEditorInput);
+
+// ページを離れる前に未保存警告
+window.addEventListener('beforeunload', e => {
+  if (isDirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ── 初期化 ───────────────────────────────────────────────────
+(async () => {
+  // コールバックURLの場合
+  if (location.pathname.endsWith('/callback')) {
+    await handleCallback();
+    return;
+  }
+
+  // 既存トークンがある場合
+  if (refreshToken) {
+    await loadText();
+    return;
+  }
+
+  // 未ログイン
+  showLogin();
+})();
+</script>
+</body>
+</html>
