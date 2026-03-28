@@ -20,69 +20,93 @@
     --radius:  6px;
   }
 
+  .light {
+    --bg:      #f5f5f5;
+    --surface: #ffffff;
+    --border:  #dddddd;
+    --text:    #1a1a1a;
+    --muted:   #999999;
+    --accent:  #4a90d9;
+    --danger:  #d94a4a;
+    --success: #4a9d5a;
+    --warning: #c8860a;
+  }
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body { height: 100%; background: var(--bg); color: var(--text);
-    font-family: 'Noto Sans JP', sans-serif; font-size: 15px; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    transition: background 0.2s, color 0.2s;
+  }
 
   #app { display: flex; flex-direction: column; height: 100vh; }
 
+  /* ── ヘッダー ── */
   header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 16px;
-    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s;
   }
 
   .logo {
-    font-family: 'JetBrains Mono', monospace; font-size: 15px;
-    font-weight: 500; color: var(--accent); letter-spacing: 0.05em; flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 500;
+    color: var(--accent); letter-spacing: 0.05em; flex-shrink: 0;
   }
 
   .spacer { flex: 1; }
-
-  #status {
-    font-size: 12px; color: var(--muted);
-    font-family: 'JetBrains Mono', monospace; white-space: nowrap;
-  }
-  #status.saving  { color: var(--warning); }
-  #status.saved   { color: var(--success); }
-  #status.dirty   { color: var(--muted); }
-  #status.error   { color: var(--danger); }
 
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 5px 12px; border-radius: var(--radius);
     border: 1px solid var(--border); background: transparent;
     color: var(--text); font-size: 13px; font-family: inherit;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap;
+    cursor: pointer; transition: background 0.15s; white-space: nowrap;
   }
   .btn:hover { background: var(--border); }
   .btn:disabled { opacity: 0.4; cursor: default; }
   .btn-primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 500; }
-  .btn-primary:hover { background: #a0ccff; border-color: #a0ccff; }
-  .btn-icon { padding: 5px 8px; font-size: 16px; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-icon {
+    padding: 5px 7px; font-size: 15px;
+    border: none; background: transparent;
+    color: var(--muted); cursor: pointer; border-radius: var(--radius);
+    transition: color 0.15s, background 0.15s;
+  }
+  .btn-icon:hover { color: var(--text); background: var(--border); }
 
+  /* ── エディタ ── */
   #editor-wrap { flex: 1; display: flex; overflow: hidden; }
 
   #editor {
     flex: 1; background: var(--bg); color: var(--text);
     border: none; outline: none; resize: none;
     padding: 20px 24px;
-    font-family: 'Noto Sans JP', sans-serif; font-size: 15px;
-    line-height: 1.75; caret-color: var(--accent);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px; line-height: 1.75;
+    caret-color: var(--accent);
+    transition: background 0.2s, color 0.2s;
   }
   #editor::placeholder { color: var(--muted); }
 
+  /* ── ログイン画面 ── */
   #login-screen {
     flex: 1; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 20px; padding: 40px;
   }
   .login-icon { font-size: 56px; opacity: 0.3; }
-  .login-title { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--accent); letter-spacing: 0.08em; }
+  .login-title { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--accent); }
   .login-sub { color: var(--muted); font-size: 14px; text-align: center; line-height: 1.6; }
-  #login-error { color: var(--danger); font-size: 13px; text-align: center; min-height: 20px; }
+  #login-error { color: var(--danger); font-size: 13px; min-height: 20px; text-align: center; }
 
+  /* ── ローディング ── */
   #loading-screen {
     flex: 1; display: flex; align-items: center; justify-content: center;
     gap: 12px; color: var(--muted);
@@ -95,12 +119,90 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── 設定パネル（オーバーレイ）── */
+  #settings-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  #settings-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 340px; max-width: 95vw;
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  .settings-title {
+    font-size: 15px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  .settings-section { display: flex; flex-direction: column; gap: 12px; }
+
+  .settings-label {
+    font-size: 11px; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+
+  .settings-row-label { font-size: 14px; }
+  .settings-row-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* トグルスイッチ */
+  .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border); border-radius: 24px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--accent); }
+  .toggle-track::after {
+    content: ''; position: absolute;
+    width: 18px; height: 18px; left: 3px; top: 3px;
+    background: white; border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+
+  /* セグメントボタン */
+  .segment-group {
+    display: flex; gap: 4px;
+    background: var(--bg); border-radius: var(--radius);
+    padding: 3px;
+  }
+  .segment-btn {
+    flex: 1; padding: 5px 8px;
+    border: none; background: transparent;
+    color: var(--muted); font-size: 12px; font-family: inherit;
+    border-radius: 4px; cursor: pointer; transition: all 0.15s;
+  }
+  .segment-btn.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  /* ポーリングステータス */
+  #polling-status {
+    font-size: 11px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    text-align: right; min-height: 16px;
+  }
+  #polling-status.active { color: var(--success); }
+
   .hidden { display: none !important; }
 
   @media (max-width: 480px) {
     header { padding: 8px 12px; }
     #editor { padding: 14px 16px; font-size: 14px; }
-    .logo { font-size: 14px; }
   }
 </style>
 </head>
@@ -110,10 +212,18 @@
   <header>
     <span class="logo">// scratchpad</span>
     <div class="spacer"></div>
-    <span id="status" class="hidden"></span>
-    <button class="btn btn-icon hidden" id="btn-reload" title="再読み込み">↺</button>
-    <button class="btn btn-icon hidden" id="btn-save"   title="保存">⬆</button>
-    <button class="btn hidden"          id="btn-logout">ログアウト</button>
+    <span id="polling-status-bar" class="hidden" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--success);"></span>
+    <!-- ダークモード -->
+    <button class="btn-icon" id="btn-theme" title="ダークモード切り替え">🌙</button>
+    <!-- 手動保存 -->
+    <button class="btn-icon hidden" id="btn-save" title="保存">💾</button>
+    <!-- リロード -->
+    <button class="btn-icon hidden" id="btn-reload" title="再読み込み">↺</button>
+    <!-- 設定 -->
+    <button class="btn-icon hidden" id="btn-settings" title="設定">⚙️</button>
+    <!-- ログアウト -->
+    <button class="btn-icon hidden" id="btn-logout" title="ログアウト">⏏</button>
+    <!-- ログインボタン -->
     <button class="btn btn-primary hidden" id="btn-login">Dropboxでログイン</button>
   </header>
 
@@ -136,48 +246,126 @@
 
 </div>
 
+<!-- 設定パネル -->
+<div id="settings-overlay" class="hidden">
+  <div id="settings-panel">
+    <div class="settings-title">
+      <span>設定</span>
+      <button class="btn-icon" id="btn-settings-close" style="font-size:18px;">✕</button>
+    </div>
+
+    <!-- 自動保存 -->
+    <div class="settings-section">
+      <div class="settings-label">保存</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">自動保存</div>
+          <div class="settings-row-sub">タイピング停止2秒後に保存</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-autosave" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- ポーリング -->
+    <div class="settings-section">
+      <div class="settings-label">自動更新（ポーリング）</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">自動更新</div>
+          <div class="settings-row-sub">Dropboxから定期的に再読み込み</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-polling">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div id="polling-interval-wrap" class="hidden">
+        <div class="segment-group">
+          <button class="segment-btn" data-sec="30">30秒</button>
+          <button class="segment-btn active" data-sec="60">60秒</button>
+          <button class="segment-btn" data-sec="120">120秒</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="polling-status">OFF</div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 //  設定
 // ============================================================
-const APP_KEY     = 'jbxq663njsk74tl';  // ← 書き換えてください
-const WORKER_BASE = 'https://scratchpad-oauth.youm00.workers.dev';
+const APP_KEY      = 'YOUR_DROPBOX_APP_KEY'; // ← 書き換えてください
+const WORKER_BASE  = 'https://scratchpad-oauth.youm00.workers.dev';
 const REDIRECT_URI = 'https://youm00.github.io/scratchpad/';
-const FILE_PATH   = '/scratchpad.txt';
+const FILE_PATH    = '/scratchpad.txt';
 // ============================================================
 
 const AUTO_SAVE_DELAY = 2000;
 
 const store = {
-  get: (k)    => localStorage.getItem(k),
-  set: (k, v) => localStorage.setItem(k, v),
-  del: (k)    => localStorage.removeItem(k),
+  get:  (k)    => localStorage.getItem(k),
+  set:  (k, v) => localStorage.setItem(k, v),
+  del:  (k)    => localStorage.removeItem(k),
+  bool: (k, d) => { const v = localStorage.getItem(k); return v === null ? d : v === 'true'; },
+  int:  (k, d) => { const v = parseInt(localStorage.getItem(k)); return isNaN(v) ? d : v; },
 };
 
-let accessToken  = store.get('sp_access')  || '';
-let refreshToken = store.get('sp_refresh') || '';
-let tokenExpiry  = parseInt(store.get('sp_expiry') || '0');
-let isDirty      = false;
-let isSaving     = false;
+// ── 状態 ─────────────────────────────────────────────────────
+let accessToken   = store.get('sp_access')  || '';
+let refreshToken  = store.get('sp_refresh') || '';
+let tokenExpiry   = parseInt(store.get('sp_expiry') || '0');
+let isDirty       = false;
+let isSaving      = false;
 let autoSaveTimer = null;
+let pollingTimer  = null;
+let isDark        = store.bool('sp_dark', true);
+let autoSave      = store.bool('sp_autosave', true);
+let pollingOn     = store.bool('sp_polling', false);
+let pollInterval  = store.int('sp_poll_interval', 60);
 
-const $loading     = document.getElementById('loading-screen');
-const $loginScreen = document.getElementById('login-screen');
-const $editorWrap  = document.getElementById('editor-wrap');
-const $editor      = document.getElementById('editor');
-const $status      = document.getElementById('status');
-const $btnLogin    = document.getElementById('btn-login');
-const $btnLoginC   = document.getElementById('btn-login-center');
-const $btnLogout   = document.getElementById('btn-logout');
-const $btnSave     = document.getElementById('btn-save');
-const $btnReload   = document.getElementById('btn-reload');
-const $loginError  = document.getElementById('login-error');
+// ── DOM ───────────────────────────────────────────────────────
+const $loading         = document.getElementById('loading-screen');
+const $loginScreen     = document.getElementById('login-screen');
+const $editorWrap      = document.getElementById('editor-wrap');
+const $editor          = document.getElementById('editor');
+const $btnLogin        = document.getElementById('btn-login');
+const $btnLoginC       = document.getElementById('btn-login-center');
+const $btnLogout       = document.getElementById('btn-logout');
+const $btnSave         = document.getElementById('btn-save');
+const $btnReload       = document.getElementById('btn-reload');
+const $btnSettings     = document.getElementById('btn-settings');
+const $btnTheme        = document.getElementById('btn-theme');
+const $settingsOverlay = document.getElementById('settings-overlay');
+const $toggleAutosave  = document.getElementById('toggle-autosave');
+const $togglePolling   = document.getElementById('toggle-polling');
+const $pollingWrap     = document.getElementById('polling-interval-wrap');
+const $pollingStatus   = document.getElementById('polling-status');
+const $pollingStatusBar = document.getElementById('polling-status-bar');
+const $loginError      = document.getElementById('login-error');
 
+// ── テーマ ───────────────────────────────────────────────────
+function applyTheme() {
+  document.body.classList.toggle('light', !isDark);
+  $btnTheme.textContent = isDark ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+  isDark = !isDark;
+  store.set('sp_dark', isDark);
+  applyTheme();
+}
+
+// ── 画面切り替え ─────────────────────────────────────────────
 function showLoading() {
   $loading.classList.remove('hidden');
   $loginScreen.classList.add('hidden');
   $editorWrap.classList.add('hidden');
-  [$btnLogin, $btnLogout, $btnSave, $btnReload, $status].forEach(el => el.classList.add('hidden'));
+  [$btnLogin, $btnLogout, $btnSave, $btnReload, $btnSettings].forEach(el => el.classList.add('hidden'));
 }
 
 function showLogin(errMsg = '') {
@@ -185,7 +373,7 @@ function showLogin(errMsg = '') {
   $loginScreen.classList.remove('hidden');
   $editorWrap.classList.add('hidden');
   $btnLogin.classList.remove('hidden');
-  [$btnLogout, $btnSave, $btnReload, $status].forEach(el => el.classList.add('hidden'));
+  [$btnLogout, $btnSave, $btnReload, $btnSettings].forEach(el => el.classList.add('hidden'));
   $loginError.textContent = errMsg;
 }
 
@@ -193,53 +381,74 @@ function showEditor() {
   $loading.classList.add('hidden');
   $loginScreen.classList.add('hidden');
   $editorWrap.classList.remove('hidden');
-  [$btnLogout, $btnSave, $btnReload, $status].forEach(el => el.classList.remove('hidden'));
+  [$btnLogout, $btnSave, $btnReload, $btnSettings].forEach(el => el.classList.remove('hidden'));
   $btnLogin.classList.add('hidden');
 }
 
-function setStatus(msg, type = '') {
-  $status.textContent = msg;
-  $status.className   = type;
-  $status.classList.remove('hidden');
-}
-
-// ── PKCE helpers ─────────────────────────────────────────────
-function base64url(buf) {
-  return btoa(String.fromCharCode(...buf))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-async function sha256str(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return base64url(new Uint8Array(buf));
-}
-  
-// ── OAuth2 ログイン（stateのみ、PKCEなし）────────────────────
-async function signIn() {
-  const verifier  = base64url(crypto.getRandomValues(new Uint8Array(32)));
-  const challenge = await sha256str(verifier);
-  const state     = Math.random().toString(36).slice(2);
-  sessionStorage.setItem('sp_oauth_state',    state);
-  sessionStorage.setItem('sp_code_verifier',  verifier);
-
-  const params = new URLSearchParams({
-    client_id:             APP_KEY,
-    response_type:         'code',
-    redirect_uri:          REDIRECT_URI,
-    token_access_type:     'offline',
-    state,
-    code_challenge:        challenge,
-    code_challenge_method: 'S256',
+// ── 設定パネル ───────────────────────────────────────────────
+function openSettings() {
+  $toggleAutosave.checked = autoSave;
+  $togglePolling.checked  = pollingOn;
+  $pollingWrap.classList.toggle('hidden', !pollingOn);
+  document.querySelectorAll('.segment-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.sec) === pollInterval);
   });
+  $settingsOverlay.classList.remove('hidden');
+}
 
+function closeSettings() {
+  $settingsOverlay.classList.add('hidden');
+}
+
+// ── ポーリング ───────────────────────────────────────────────
+function updatePollingStatus(text, active = false) {
+  $pollingStatus.textContent = text;
+  $pollingStatus.className   = active ? 'active' : '';
+  if (active) {
+    $pollingStatusBar.textContent = '⟳ ' + text;
+    $pollingStatusBar.classList.remove('hidden');
+  } else {
+    $pollingStatusBar.classList.add('hidden');
+  }
+}
+
+function startPolling() {
+  stopPolling();
+  if (!pollingOn) { updatePollingStatus('OFF'); return; }
+  updatePollingStatus(`次回更新まで ${pollInterval}秒`, true);
+  let remaining = pollInterval;
+  pollingTimer = setInterval(async () => {
+    remaining--;
+    if (remaining <= 0) {
+      remaining = pollInterval;
+      updatePollingStatus('更新中...', true);
+      await loadText(true);
+      updatePollingStatus(`次回更新まで ${pollInterval}秒`, true);
+    } else {
+      updatePollingStatus(`次回更新まで ${remaining}秒`, true);
+    }
+  }, 1000);
+}
+
+function stopPolling() {
+  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+  updatePollingStatus('OFF');
+}
+
+// ── OAuth2 ───────────────────────────────────────────────────
+function signIn() {
+  const state = Math.random().toString(36).slice(2);
+  sessionStorage.setItem('sp_oauth_state', state);
+  const params = new URLSearchParams({
+    client_id: APP_KEY, response_type: 'code',
+    redirect_uri: REDIRECT_URI, token_access_type: 'offline', state,
+  });
   location.href = 'https://www.dropbox.com/oauth2/authorize?' + params;
 }
 
 function saveTokens(data) {
   accessToken = data.access_token;
-  if (data.refresh_token) {
-    refreshToken = data.refresh_token;
-    store.set('sp_refresh', refreshToken);
-  }
+  if (data.refresh_token) { refreshToken = data.refresh_token; store.set('sp_refresh', refreshToken); }
   const expiry = Date.now() + (data.expires_in - 300) * 1000;
   tokenExpiry  = expiry;
   store.set('sp_access', accessToken);
@@ -248,13 +457,12 @@ function saveTokens(data) {
 
 async function ensureValidToken() {
   if (!refreshToken) throw new Error('ログインが必要です');
-  if (Date.now() > tokenExpiry) await refreshAccessToken();
+  if (Date.now() > tokenExpiry) await doRefresh();
 }
 
-async function refreshAccessToken() {
+async function doRefresh() {
   const resp = await fetch(WORKER_BASE + '/token/refresh', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
   if (!resp.ok) throw new Error('トークン更新失敗');
@@ -262,95 +470,83 @@ async function refreshAccessToken() {
 }
 
 async function exchangeCode(code) {
-  const verifier = sessionStorage.getItem('sp_code_verifier') || '';
-  sessionStorage.removeItem('sp_code_verifier');
-
   const resp = await fetch(WORKER_BASE + '/token/exchange', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI, code_verifier: verifier }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI }),
   });
   const data = await resp.json();
-  if (!resp.ok || !data.access_token) {
-    throw new Error(data.error_description || data.error || JSON.stringify(data));
-  }
+  if (!resp.ok || !data.access_token) throw new Error(data.error_description || JSON.stringify(data));
   saveTokens(data);
 }
 
-async function loadText() {
-  showLoading();
+// ── ファイル操作 ─────────────────────────────────────────────
+async function loadText(silent = false) {
+  if (!silent) showLoading();
   try {
     await ensureValidToken();
     const resp = await fetch('https://content.dropboxapi.com/2/files/download', {
-      method:  'POST',
+      method: 'POST',
       headers: {
         'Authorization':   'Bearer ' + accessToken,
         'Dropbox-API-Arg': JSON.stringify({ path: FILE_PATH }),
       },
     });
-
     if (resp.ok) {
+      // ポーリング時は未保存の変更があればスキップ
+      if (silent && isDirty) return;
       $editor.value = await resp.text();
     } else if (resp.status === 409) {
-      $editor.value = '';
+      if (!silent) $editor.value = '';
     } else {
       throw new Error('読み込みエラー ' + resp.status);
     }
-
     isDirty = false;
-    setStatus('読み込み完了', 'saved');
-    showEditor();
-    setTimeout(() => setStatus('', ''), 2000);
+    if (!silent) showEditor();
   } catch (e) {
-    if (e.message.includes('ログイン')) { showLogin(); return; }
-    showEditor();
-    setStatus('読み込みエラー: ' + e.message, 'error');
+    if (!silent) {
+      if (e.message.includes('ログイン')) { showLogin(); return; }
+      showEditor();
+    }
   }
 }
 
 async function saveText() {
   if (isSaving) return;
   isSaving = true;
-  setStatus('保存中...', 'saving');
-  $btnSave.disabled = true;
-
+  $btnSave.style.color = 'var(--accent)';
   try {
     await ensureValidToken();
     const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
-      method:  'POST',
+      method: 'POST',
       headers: {
         'Authorization':   'Bearer ' + accessToken,
         'Content-Type':    'application/octet-stream',
-        'Dropbox-API-Arg': JSON.stringify({
-          path: FILE_PATH, mode: 'overwrite', autorename: false, mute: true,
-        }),
+        'Dropbox-API-Arg': JSON.stringify({ path: FILE_PATH, mode: 'overwrite', autorename: false, mute: true }),
       },
       body: new TextEncoder().encode($editor.value),
     });
-
     if (!resp.ok) throw new Error('保存エラー ' + resp.status);
-
     isDirty = false;
-    const now = new Date();
-    const hms = [now.getHours(), now.getMinutes(), now.getSeconds()]
-      .map(n => String(n).padStart(2, '0')).join(':');
-    setStatus('✓ 保存済み ' + hms, 'saved');
   } catch (e) {
-    setStatus('保存エラー: ' + e.message, 'error');
+    // エラー時はアイコンを赤に
+    $btnSave.style.color = 'var(--danger)';
+    setTimeout(() => { $btnSave.style.color = ''; }, 3000);
   } finally {
     isSaving = false;
-    $btnSave.disabled = false;
+    setTimeout(() => { $btnSave.style.color = ''; }, 1000);
   }
 }
 
 function onEditorInput() {
-  if (!isDirty) { isDirty = true; setStatus('未保存の変更あり', 'dirty'); }
+  isDirty = true;
+  if (!autoSave) return;
   clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(saveText, AUTO_SAVE_DELAY);
 }
 
 function signOut() {
   if (!confirm('ログアウトしますか？')) return;
+  stopPolling();
   accessToken = refreshToken = '';
   ['sp_access', 'sp_refresh', 'sp_expiry'].forEach(k => store.del(k));
   $editor.value = '';
@@ -358,50 +554,84 @@ function signOut() {
   showLogin();
 }
 
-$btnLogin.addEventListener('click',  signIn);
-$btnLoginC.addEventListener('click', signIn);
-$btnLogout.addEventListener('click', signOut);
-$btnSave.addEventListener('click',   saveText);
-$btnReload.addEventListener('click', loadText);
-$editor.addEventListener('input',    onEditorInput);
+// ── イベント ─────────────────────────────────────────────────
+$btnTheme.addEventListener('click',          toggleTheme);
+$btnLogin.addEventListener('click',          signIn);
+$btnLoginC.addEventListener('click',         signIn);
+$btnLogout.addEventListener('click',         signOut);
+$btnSave.addEventListener('click',           saveText);
+$btnReload.addEventListener('click',         () => loadText());
+$btnSettings.addEventListener('click',       openSettings);
+document.getElementById('btn-settings-close').addEventListener('click', closeSettings);
+$settingsOverlay.addEventListener('click',   e => { if (e.target === $settingsOverlay) closeSettings(); });
+
+// 自動保存トグル
+$toggleAutosave.addEventListener('change', () => {
+  autoSave = $toggleAutosave.checked;
+  store.set('sp_autosave', autoSave);
+});
+
+// ポーリングトグル
+$togglePolling.addEventListener('change', () => {
+  pollingOn = $togglePolling.checked;
+  store.set('sp_polling', pollingOn);
+  $pollingWrap.classList.toggle('hidden', !pollingOn);
+  pollingOn ? startPolling() : stopPolling();
+});
+
+// ポーリング間隔
+document.querySelectorAll('.segment-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pollInterval = parseInt(btn.dataset.sec);
+    store.set('sp_poll_interval', pollInterval);
+    document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (pollingOn) startPolling();
+  });
+});
 
 window.addEventListener('beforeunload', e => {
   if (isDirty) { e.preventDefault(); e.returnValue = ''; }
 });
 
-// ── 初期化（BulletMemo方式）─────────────────────────────────
+// ── 初期化 ───────────────────────────────────────────────────
 window.addEventListener('load', async () => {
+  applyTheme();
+
   const params = new URLSearchParams(location.search);
   const code   = params.get('code');
   const state  = params.get('state');
 
-  // OAuthコールバック
   if (code && state && state === sessionStorage.getItem('sp_oauth_state')) {
     sessionStorage.removeItem('sp_oauth_state');
     history.replaceState({}, '', REDIRECT_URI);
     try {
       await exchangeCode(code);
       await loadText();
+      showEditor();
+      if (pollingOn) startPolling();
     } catch (e) {
       showLogin('ログインエラー: ' + e.message);
     }
     return;
   }
 
-  // 既存トークンあり
   if (refreshToken) {
     try {
       await ensureValidToken();
       await loadText();
+      showEditor();
+      if (pollingOn) startPolling();
     } catch (e) {
       showLogin();
     }
     return;
   }
 
-  // 未ログイン
   showLogin();
 });
+
+$editor.addEventListener('input', onEditorInput);
 </script>
 </body>
 </html>
