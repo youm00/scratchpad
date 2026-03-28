@@ -252,8 +252,11 @@ async function exchangeCode(code) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, redirect_uri: REDIRECT_URI }),
   });
-  if (!resp.ok) throw new Error('トークン取得失敗');
-  saveTokens(await resp.json());
+  const data = await resp.json();
+  if (!resp.ok || !data.access_token) {
+    throw new Error(data.error_description || data.error || JSON.stringify(data));
+  }
+  saveTokens(data);
 }
 
 async function loadText() {
