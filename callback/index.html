@@ -3,9 +3,9 @@
 <head><meta charset="UTF-8"></head>
 <body>
 <script>
-  // 認証コードをメインページに渡してリダイレクト
-  const params = location.search;
-  location.replace('/scratchpad/' + params);
+  // クエリパラメータをそのまま維持してメインページへ
+  const search = location.search;
+  location.replace('https://youm00.github.io/scratchpad/index.html' + search);
 </script>
 </body>
 </html>
