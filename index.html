@@ -293,6 +293,27 @@
       </div>
     </div>
 
+    <!-- インポート・エクスポート -->
+    <div class="settings-section">
+      <div class="settings-label">インポート・エクスポート</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">エクスポート</div>
+          <div class="settings-row-sub">現在のテキストを .txt で保存</div>
+        </div>
+        <button class="btn" id="btn-export" style="flex-shrink:0;">⬆ 保存</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">インポート</div>
+          <div class="settings-row-sub">.txt ファイルを読み込む</div>
+        </div>
+        <button class="btn" id="btn-import" style="flex-shrink:0;">⬇ 読込</button>
+      </div>
+    </div>
+    <!-- ファイル選択（非表示） -->
+    <input type="file" id="import-file-input" accept=".txt" style="display:none;">
+
     <div id="polling-status">OFF</div>
   </div>
 </div>
@@ -634,6 +655,59 @@ window.addEventListener('load', async () => {
 });
 
 $editor.addEventListener('input', onEditorInput);
+// ── エクスポート ─────────────────────────────────────────────
+function exportFile() {
+  const text = $editor.value;
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'scratchpad.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── インポート ───────────────────────────────────────────────
+const $importInput = document.getElementById('import-file-input');
+
+document.getElementById('btn-export').addEventListener('click', exportFile);
+
+document.getElementById('btn-import').addEventListener('click', () => {
+  $importInput.value = ''; // 同じファイルを再選択できるようにリセット
+  $importInput.click();
+});
+
+$importInput.addEventListener('change', () => {
+  const file = $importInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const importedText = e.target.result;
+
+    const choice = confirm(
+      `「${file.name}」を読み込みます。\n\nOK → 上書き　　キャンセル → 末尾に追記`
+    );
+
+    if (choice) {
+      // 上書き
+      $editor.value = importedText;
+    } else {
+      // 末尾に追記
+      const current = $editor.value;
+      $editor.value = current ? current + '\n' + importedText : importedText;
+    }
+
+    // カーソルを末尾へ
+    $editor.selectionStart = $editor.selectionEnd = $editor.value.length;
+
+    // 自動保存タイマー起動
+    onEditorInput();
+
+    closeSettings();
+  };
+  reader.readAsText(file, 'UTF-8');
+});
 </script>
 </body>
 </html>
