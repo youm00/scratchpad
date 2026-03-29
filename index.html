@@ -83,18 +83,20 @@
   .btn-icon:hover { color: var(--text); background: var(--border); }
 
   /* ── エディタ ── */
-  #editor-wrap { flex: 1; display: flex; overflow: hidden; }
+  #editor-wrap { flex: 1; display: flex; overflow: hidden; background: var(--bg); }
 
-  #editor {
+#editor {
     flex: 1; background: var(--bg); color: var(--text);
     border: none; outline: none; resize: none;
-    padding: 20px 24px;
+    margin: 12px 24px 12px 24px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
     font-family: 'Noto Sans JP', sans-serif;
     font-size: 15px; line-height: 1.75;
     caret-color: var(--accent);
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
   }
-  #editor::placeholder { color: var(--muted); }
 
   /* ── ログイン画面 ── */
   #login-screen {
