@@ -313,7 +313,36 @@
     </div>
     <!-- ファイル選択（非表示） -->
     <input type="file" id="import-file-input" accept=".txt" style="display:none;">
-
+<!-- バックアップ -->
+    <div class="settings-section">
+      <div class="settings-label">バックアップ</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">手動バックアップ</div>
+          <div class="settings-row-sub">今すぐDropboxにバックアップ</div>
+        </div>
+        <button class="btn" id="btn-backup-now" style="flex-shrink:0;">📂 保存</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">定期バックアップ</div>
+          <div class="settings-row-sub">一定間隔で自動バックアップ</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-backup">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div id="backup-interval-wrap" class="hidden">
+        <div class="segment-group">
+          <button class="segment-btn backup-seg" data-min="30">30分</button>
+          <button class="segment-btn backup-seg active" data-min="60">1時間</button>
+          <button class="segment-btn backup-seg" data-min="360">6時間</button>
+          <button class="segment-btn backup-seg" data-min="1440">毎日</button>
+        </div>
+      </div>
+      <div id="backup-status" style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;min-height:16px;"></div>
+    </div>
     <div id="polling-status">OFF</div>
   </div>
 </div>
@@ -708,6 +737,103 @@ $importInput.addEventListener('change', () => {
   };
   reader.readAsText(file, 'UTF-8');
 });
+// ── バックアップ ─────────────────────────────────────────────
+let backupOn       = store.bool('sp_backup', false);
+let backupInterval = store.int('sp_backup_interval', 60); // 分
+let backupTimer    = null;
+
+const $toggleBackup     = document.getElementById('toggle-backup');
+const $backupWrap       = document.getElementById('backup-interval-wrap');
+const $backupStatus     = document.getElementById('backup-status');
+
+function backupFileName() {
+  const now = new Date();
+  const y   = now.getFullYear();
+  const m   = String(now.getMonth() + 1).padStart(2, '0');
+  const d   = String(now.getDate()).padStart(2, '0');
+  return `/backup/${y}${m}${d}_scratchpad.txt`;
+}
+
+async function doBackup() {
+  $backupStatus.style.color = 'var(--muted)';
+  $backupStatus.textContent  = 'バックアップ中...';
+  try {
+    await ensureValidToken();
+    const path = backupFileName();
+    const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization':   'Bearer ' + accessToken,
+        'Content-Type':    'application/octet-stream',
+        'Dropbox-API-Arg': JSON.stringify({
+          path, mode: 'overwrite', autorename: false, mute: true,
+        }),
+      },
+      body: new TextEncoder().encode($editor.value),
+    });
+    if (!resp.ok) throw new Error('upload failed: ' + resp.status);
+    const now = new Date();
+    const hms = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    $backupStatus.style.color = 'var(--success)';
+    $backupStatus.textContent  = `✅ ${path.split('/').pop()} を保存 (${hms})`;
+  } catch (e) {
+    $backupStatus.style.color = 'var(--danger)';
+    $backupStatus.textContent  = `❌ バックアップ失敗: ${e.message}`;
+  }
+}
+
+function startBackupTimer() {
+  if (backupTimer) clearInterval(backupTimer);
+  if (!backupOn) return;
+  backupTimer = setInterval(doBackup, backupInterval * 60 * 1000);
+}
+
+// 設定パネルを開いたとき状態を反映（既存のopenSettings()に追記）
+const _origOpenSettings = openSettings;
+openSettings = function() {
+  _origOpenSettings();
+  $toggleBackup.checked = backupOn;
+  $backupWrap.classList.toggle('hidden', !backupOn);
+  document.querySelectorAll('.backup-seg').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.min) === backupInterval);
+  });
+};
+
+// イベント
+document.getElementById('btn-backup-now').addEventListener('click', doBackup);
+
+$toggleBackup.addEventListener('change', () => {
+  backupOn = $toggleBackup.checked;
+  store.set('sp_backup', backupOn);
+  $backupWrap.classList.toggle('hidden', !backupOn);
+  backupOn ? startBackupTimer() : clearInterval(backupTimer);
+});
+
+document.querySelectorAll('.backup-seg').forEach(btn => {
+  btn.addEventListener('click', () => {
+    backupInterval = parseInt(btn.dataset.min);
+    store.set('sp_backup_interval', backupInterval);
+    document.querySelectorAll('.backup-seg').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (backupOn) startBackupTimer();
+  });
+});
+
+// 手動保存時にもバックアップ（既存のsaveText()の成功後に追記）
+const _origSaveText = saveText;
+saveText = async function() {
+  await _origSaveText();
+  if (backupOn) await doBackup();
+};
+
+// 初期化時にタイマー開始
+const _origLoad = window.addEventListener;
+// startBackupTimer は showEditor() 後に呼ぶ
+const _origShowEditor = showEditor;
+showEditor = function() {
+  _origShowEditor();
+  startBackupTimer();
+};
 </script>
 </body>
 </html>
