@@ -788,15 +788,16 @@ function startBackupTimer() {
   backupTimer = setInterval(doBackup, backupInterval * 60 * 1000);
 }
 
-// 設定パネルを開いたとき状態を反映（既存のopenSettings()に追記）
+// ↓ これに差し替え
 const _origOpenSettings = openSettings;
 openSettings = function() {
-  _origOpenSettings();
+  // バックアップ設定の反映だけ行い、既存処理はそのまま呼ぶ
   $toggleBackup.checked = backupOn;
   $backupWrap.classList.toggle('hidden', !backupOn);
   document.querySelectorAll('.backup-seg').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.min) === backupInterval);
   });
+  _origOpenSettings(); // ← 最後に呼ぶ（ポーリング状態の上書きを防ぐ）
 };
 
 // イベント
