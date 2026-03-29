@@ -442,9 +442,9 @@ function openSettings() {
   $toggleAutosave.checked = autoSave;
   $togglePolling.checked  = pollingOn;
   $pollingWrap.classList.toggle('hidden', !pollingOn);
-  document.querySelectorAll('.segment-btn').forEach(btn => {
-    btn.classList.toggle('active', parseInt(btn.dataset.sec) === pollInterval);
-  });
+  document.querySelectorAll('.segment-btn:not(.backup-seg)').forEach(btn => {
+  btn.classList.toggle('active', parseInt(btn.dataset.sec) === pollInterval);
+});
   $settingsOverlay.classList.remove('hidden');
 }
 
@@ -632,16 +632,16 @@ $togglePolling.addEventListener('change', () => {
 });
 
 // ポーリング間隔
-document.querySelectorAll('.segment-btn').forEach(btn => {
+document.querySelectorAll('.segment-btn:not(.backup-seg)').forEach(btn => {
   btn.addEventListener('click', () => {
     pollInterval = parseInt(btn.dataset.sec);
     store.set('sp_poll_interval', pollInterval);
-    document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.segment-btn:not(.backup-seg)').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     if (pollingOn) startPolling();
   });
 });
-
+  
 window.addEventListener('beforeunload', e => {
   if (isDirty) { e.preventDefault(); e.returnValue = ''; }
 });
