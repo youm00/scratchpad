@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scratchpad</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23F5C518'/><rect x='7' y='6' width='14' height='18' rx='2' fill='%23fff' stroke='%23333' stroke-width='1.5'/><line x1='10' y1='11' x2='18' y2='11' stroke='%23333' stroke-width='1.5' stroke-linecap='round'/><line x1='10' y1='15' x2='18' y2='15' stroke='%23333' stroke-width='1.5' stroke-linecap='round'/><line x1='10' y1='19' x2='15' y2='19' stroke='%23333' stroke-width='1.5' stroke-linecap='round'/><rect x='18' y='18' width='5' height='10' rx='1' fill='%23FF6B00' transform='rotate(-40 21 23)'/><polygon points='19,27 21,29 23,27' fill='%23FFD700' transform='rotate(-40 21 23)'/></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500&display=swap');
 
@@ -488,29 +489,14 @@ function stopPolling() {
 }
 
 // ── OAuth2 ───────────────────────────────────────────────────
-async function signIn() {
+function signIn() {
   const state = Math.random().toString(36).slice(2);
-  const verifier = generateVerifier();
-  const challenge = await generateChallenge(verifier);
   sessionStorage.setItem('sp_oauth_state', state);
-  sessionStorage.setItem('sp_code_verifier', verifier);
   const params = new URLSearchParams({
     client_id: APP_KEY, response_type: 'code',
     redirect_uri: REDIRECT_URI, token_access_type: 'offline', state,
-    code_challenge: challenge, code_challenge_method: 'S256',
   });
   location.href = 'https://www.dropbox.com/oauth2/authorize?' + params;
-}
-
-function generateVerifier() {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-
-async function generateChallenge(verifier) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 
 function saveTokens(data) {
@@ -537,11 +523,9 @@ async function doRefresh() {
 }
 
 async function exchangeCode(code) {
-  const verifier = sessionStorage.getItem('sp_code_verifier');
-  sessionStorage.removeItem('sp_code_verifier');
   const resp = await fetch(WORKER_BASE + '/token/exchange', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI, code_verifier: verifier }),
+    body: JSON.stringify({ code, redirect_uri: REDIRECT_URI }),
   });
   const data = await resp.json();
   if (!resp.ok || !data.access_token) throw new Error(data.error_description || JSON.stringify(data));
