@@ -326,6 +326,13 @@
       </div>
       <div class="settings-row">
         <div>
+          <div class="settings-row-label">バックアップから復元</div>
+          <div class="settings-row-sub">保存済みバックアップを選択して復元</div>
+        </div>
+        <button class="btn" id="btn-restore" style="flex-shrink:0;">🔄 復元</button>
+      </div>
+      <div class="settings-row">
+        <div>
           <div class="settings-row-label">定期バックアップ</div>
           <div class="settings-row-sub">一定間隔で自動バックアップ</div>
         </div>
@@ -836,6 +843,113 @@ showEditor = function() {
   _origShowEditor();
   startBackupTimer();
 };
+
+// ── バックアップからの復元 ────────────────────────────────────
+async function listBackups() {
+  await ensureValidToken();
+  const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify({ path: '/backup', limit: 400 }),
+  });
+  if (res.status === 409) return []; // フォルダ未作成
+  if (!res.ok) throw new Error('list failed: ' + res.status);
+  const data = await res.json();
+  return data.entries
+    .filter(e => e.name.endsWith('.txt'))
+    .sort((a, b) => b.server_modified.localeCompare(a.server_modified));
+}
+
+async function restoreBackup() {
+  $backupStatus.style.color = 'var(--muted)';
+  $backupStatus.textContent  = '一覧取得中...';
+  let backups;
+  try {
+    backups = await listBackups();
+  } catch (e) {
+    $backupStatus.style.color = 'var(--danger)';
+    $backupStatus.textContent  = '❌ 一覧取得失敗: ' + e.message;
+    return;
+  }
+
+  $backupStatus.textContent = '';
+
+  if (!backups.length) {
+    $backupStatus.style.color = 'var(--muted)';
+    $backupStatus.textContent  = 'バックアップファイルがありません';
+    return;
+  }
+
+  // 選択モーダルを動的生成
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:320px;max-height:70vh;display:flex;flex-direction:column;gap:12px;';
+  box.innerHTML = `
+    <div style="font-weight:bold;font-size:0.95rem;color:var(--text);">復元するバックアップを選択</div>
+    <div id="_spRestoreList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;"></div>
+    <button id="_spRestoreCancel" class="btn" style="width:100%">キャンセル</button>
+  `;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  const list = box.querySelector('#_spRestoreList');
+  backups.forEach(b => {
+    // YYYYMMDD_HHmmss_scratchpad.txt → YYYY/MM/DD HH:mm:ss
+    const matched = b.name.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+    const label = matched
+      ? `${matched[1]}/${matched[2]}/${matched[3]} ${matched[4]}:${matched[5]}:${matched[6]}`
+      : b.name;
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.style.cssText = 'text-align:left;font-size:0.82rem;font-family:var(--font-mono);';
+    btn.textContent = label;
+    btn.onclick = () => { overlay.remove(); confirmRestore(b); };
+    list.appendChild(btn);
+  });
+  box.querySelector('#_spRestoreCancel').onclick = () => {
+    overlay.remove();
+    $backupStatus.textContent = '';
+  };
+}
+
+async function confirmRestore(entry) {
+  const matched = entry.name.match(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+  const label = matched
+    ? `${matched[1]}/${matched[2]}/${matched[3]} ${matched[4]}:${matched[5]}:${matched[6]}`
+    : entry.name;
+
+  if (!confirm(`「${label}」から復元しますか？\n\n⚠️ 現在のテキストはすべて上書きされます。`)) return;
+
+  $backupStatus.style.color = 'var(--muted)';
+  $backupStatus.textContent  = '復元中...';
+  try {
+    await ensureValidToken();
+    const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        'Authorization':   'Bearer ' + accessToken,
+        'Dropbox-API-Arg': JSON.stringify({ path: entry.path_lower }),
+      },
+    });
+    if (!res.ok) throw new Error('download failed: ' + res.status);
+    const text = await res.text();
+    $editor.value = text;
+    isDirty = true;
+    await saveText(); // Dropboxのscratchpad.txtにも反映
+    const hm = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    $backupStatus.style.color = 'var(--success)';
+    $backupStatus.textContent  = `✅ 復元完了 (${hm})`;
+  } catch (e) {
+    $backupStatus.style.color = 'var(--danger)';
+    $backupStatus.textContent  = '❌ 復元失敗: ' + e.message;
+  }
+}
+
+document.getElementById('btn-restore').addEventListener('click', restoreBackup);
 </script>
 </body>
 </html>
