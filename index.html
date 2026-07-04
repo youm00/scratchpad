@@ -584,12 +584,9 @@ async function loadText(silent = false) {
     if (resp.ok) {
       // ポーリング時は未保存の変更があればスキップ
       if (silent && isDirty) return;
-      // Dropbox-API-Result ヘッダーに server_modified が含まれる
-      const apiResult = resp.headers.get('Dropbox-API-Result');
-      if (apiResult) {
-        try { showFileModified(JSON.parse(apiResult).server_modified); } catch (_) {}
-      }
       $editor.value = await resp.text();
+      // CORSの制限でヘッダーから取れないためget_metadataで取得
+      getFileModified();
     } else if (resp.status === 409) {
       if (!silent) $editor.value = '';
     } else {
@@ -621,9 +618,8 @@ async function saveText() {
       body: new TextEncoder().encode($editor.value),
     });
     if (!resp.ok) throw new Error('保存エラー ' + resp.status);
-    // upload レスポンスに server_modified が含まれる
-    try { showFileModified((await resp.json()).server_modified); } catch (_) {}
     isDirty = false;
+    getFileModified();
   } catch (e) {
     // エラー時はアイコンを赤に
     $btnSave.style.color = 'var(--danger)';
