@@ -10,6 +10,10 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500&display=swap');
 
+  /* ── テーマ ──
+     :root        = ダーク（既定）
+     body.light   = ライト（白っぽい画面）
+     body.blue    = ダークブルー（#1f2d3a ヤンキースブルー基準） */
   :root {
     --bg:      #1a1a1a;
     --surface: #222222;
@@ -33,6 +37,18 @@
     --danger:  #d94a4a;
     --success: #4a9d5a;
     --warning: #c8860a;
+  }
+
+  .blue {
+    --bg:      #1f2d3a;
+    --surface: #283a4a;
+    --border:  #3b5063;
+    --text:    #e6edf3;
+    --muted:   #7b8d9c;
+    --accent:  #8cc4ff;
+    --danger:  #f08080;
+    --success: #7ed6a0;
+    --warning: #f0c878;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -219,8 +235,8 @@
     <div class="spacer"></div>
     <span id="polling-status-bar" class="hidden" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--success);"></span>
     <span id="file-modified" class="hidden" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);"></span>
-    <!-- ダークモード -->
-    <button class="btn-icon" id="btn-theme" title="ダークモード切り替え">🌙</button>
+    <!-- テーマ切り替え（ダーク → ライト → ダークブルー） -->
+    <button class="btn-icon" id="btn-theme" title="テーマ切り替え">🌙</button>
     <!-- 手動保存 -->
     <button class="btn-icon hidden" id="btn-save" title="保存">💾</button>
     <!-- リロード -->
@@ -362,7 +378,7 @@
 // ============================================================
 //  設定
 // ============================================================
-const APP_KEY      = 'jbxq663njsk74tl'; // ← 書き換えてください
+const APP_KEY      = 'jbxq663njsk74tl';
 const WORKER_BASE  = 'https://scratchpad-oauth.youm00.workers.dev';
 const REDIRECT_URI = 'https://youm00.github.io/scratchpad/';
 const FILE_PATH    = '/scratchpad.txt';
@@ -378,6 +394,20 @@ const store = {
   int:  (k, d) => { const v = parseInt(localStorage.getItem(k)); return isNaN(v) ? d : v; },
 };
 
+// ── テーマ定義 ───────────────────────────────────────────────
+// 切り替え順: ダーク → ライト → ダークブルー → ダーク …
+const THEMES      = ['dark', 'light', 'blue'];
+const THEME_ICON  = { dark: '🌙', light: '☀️', blue: '🌊' };
+const THEME_LABEL = { dark: 'ダーク', light: 'ライト', blue: 'ダークブルー' };
+
+function loadTheme() {
+  const t = store.get('sp_theme');
+  if (THEMES.includes(t)) return t;
+  // 旧バージョン（sp_dark: true/false）の設定を引き継ぐ
+  if (store.get('sp_dark') === 'false') return 'light';
+  return 'dark';
+}
+
 // ── 状態 ─────────────────────────────────────────────────────
 let accessToken   = store.get('sp_access')  || '';
 let refreshToken  = store.get('sp_refresh') || '';
@@ -386,7 +416,7 @@ let isDirty       = false;
 let isSaving      = false;
 let autoSaveTimer = null;
 let pollingTimer  = null;
-let isDark        = store.bool('sp_dark', true);
+let theme         = loadTheme();
 let autoSave      = store.bool('sp_autosave', true);
 let pollingOn     = store.bool('sp_polling', false);
 let pollInterval  = store.int('sp_poll_interval', 60);
@@ -413,13 +443,16 @@ const $loginError      = document.getElementById('login-error');
 
 // ── テーマ ───────────────────────────────────────────────────
 function applyTheme() {
-  document.body.classList.toggle('light', !isDark);
-  $btnTheme.textContent = isDark ? '🌙' : '☀️';
+  document.body.classList.toggle('light', theme === 'light');
+  document.body.classList.toggle('blue',  theme === 'blue');
+  $btnTheme.textContent = THEME_ICON[theme];
+  const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  $btnTheme.title = `テーマ: ${THEME_LABEL[theme]}（クリックで ${THEME_LABEL[next]} へ）`;
 }
 
 function toggleTheme() {
-  isDark = !isDark;
-  store.set('sp_dark', isDark);
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  store.set('sp_theme', theme);
   applyTheme();
 }
 
@@ -831,7 +864,6 @@ function startBackupTimer() {
   backupTimer = setInterval(doBackup, backupInterval * 60 * 1000);
 }
 
-// ↓ これに差し替え
 const _origOpenSettings = openSettings;
 openSettings = function() {
   // バックアップ設定の反映だけ行い、既存処理はそのまま呼ぶ
