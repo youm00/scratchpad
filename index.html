@@ -914,18 +914,29 @@ showEditor = function() {
 // ── バックアップからの復元 ────────────────────────────────────
 async function listBackups() {
   await ensureValidToken();
-  const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + accessToken,
-      'Content-Type':  'application/json',
-    },
-    body: JSON.stringify({ path: '/backup', limit: 400 }),
+  const headers = {
+    'Authorization': 'Bearer ' + accessToken,
+    'Content-Type':  'application/json',
+  };
+  let res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+    method: 'POST', headers,
+    body: JSON.stringify({ path: '/backup', limit: 2000 }),
   });
   if (res.status === 409) return []; // フォルダ未作成
   if (!res.ok) throw new Error('list failed: ' + res.status);
-  const data = await res.json();
-  return data.entries
+  let data = await res.json();
+  let entries = data.entries;
+  // 件数が多い場合は続きを取得（has_more の間）
+  while (data.has_more) {
+    res = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+      method: 'POST', headers,
+      body: JSON.stringify({ cursor: data.cursor }),
+    });
+    if (!res.ok) throw new Error('list continue failed: ' + res.status);
+    data = await res.json();
+    entries = entries.concat(data.entries);
+  }
+  return entries
     .filter(e => e.name.endsWith('.txt'))
     .sort((a, b) => b.server_modified.localeCompare(a.server_modified));
 }
